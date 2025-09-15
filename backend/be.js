@@ -33,23 +33,38 @@ const SensorData = mongoose.model('SensorData', sensorDataSchema);
 app.post('/api/sensor-data', async (req, res) => {
     try {
         const { temperature, humidity } = req.body;
+
+        // แสดงค่าที่รับเข้ามาใน backend ก่อนบันทึก
+        console.log('Received sensor data:', { temperature, humidity });
+
         const newSensorData = new SensorData({ temperature, humidity });
         await newSensorData.save();
-        res.status(201).send('Data saved successfully');
+
+        // ส่งค่าที่บันทึกกลับไปให้ client
+        res.status(201).json({
+            message: 'Data saved successfully',
+            data: { temperature, humidity, timestamp: newSensorData.timestamp }
+        });
     } catch (err) {
         console.error('Error saving data:', err);
-        res.status(500).send('Error saving data');
+        res.status(500).json({ message: 'Error saving data', error: err });
     }
 });
 
-// ✅ Route: หลายค่า (ล่าสุด 10 ค่า) ที่ /api/sensor-data
+app.use((req, res, next) => {
+    console.log(`Incoming ${req.method} request to ${req.url}`);
+    next();
+});
+
+
+// Route: ดึงหลายค่า (ล่าสุด 10 ค่า) ที่ /api/sensor-data
 app.get('/api/sensor-data', async (req, res) => {
     try {
         const data = await SensorData.find().sort({ timestamp: -1 }).limit(10);
         res.status(200).json(data);
     } catch (err) {
         console.error('Error retrieving data:', err);
-        res.status(500).send('Error retrieving data');
+        res.status(500).json({ message: 'Error retrieving data', error: err });
     }
 });
 
